@@ -1,0 +1,34 @@
+services:
+  api:
+    build: ./server
+    environment: &server-environment
+      DB_URL: ${DB_URL:?Set a reachable existing MySQL 5.1.42 database URL}
+      DB_USER: ${DB_USER:-family}
+      DB_PASSWORD: ${DB_PASSWORD:?Configure the existing database account password}
+      INVITE_CODE: ${INVITE_CODE:?Run scripts/init-env.ps1 first}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      AI_BASE_URL: ${AI_BASE_URL:-https://dashscope.aliyuncs.com}
+      VISION_MODEL: ${VISION_MODEL:-qwen3-vl-plus}
+      SPEECH_MODEL: ${SPEECH_MODEL:-qwen3-tts-flash}
+      STORAGE_PATH: /app/data/uploads
+      APP_ROLE: api
+    ports: ["8080:8080"]
+    volumes: ["learning-files:/app/data"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  worker:
+    build: ./server
+    environment:
+      <<: *server-environment
+      APP_ROLE: worker
+      DB_MIGRATIONS_ENABLED: "false"
+    volumes: ["learning-files:/app/data"]
+    depends_on:
+      api: {condition: service_healthy}
+    restart: unless-stopped
+volumes:
+  learning-files:

@@ -1,0 +1,63 @@
+package cn.family.learning.data;
+
+import org.apache.ibatis.annotations.*;
+import java.util.List;
+import cn.family.learning.data.Rows.*;
+
+@Mapper
+public interface LearningMapper {
+    @Select("SELECT * FROM parent_account WHERE login_name=#{name}") Account account(String name);
+    @Select("SELECT id FROM parent_account WHERE id=#{owner} FOR UPDATE") String lockAccount(String owner);
+    @Insert("INSERT INTO parent_account(id,login_name,password_hash) VALUES(#{id},#{loginName},#{passwordHash})") void accountInsert(Account a);
+    @Insert("INSERT IGNORE INTO invite_code(id,code_hash,remaining_uses,expires_at) VALUES(#{id},#{hash},20,DATE_ADD(UTC_TIMESTAMP(),INTERVAL 30 DAY))") void seedInvite(@Param("id") String id,@Param("hash") String hash);
+    @Select("SELECT * FROM invite_code WHERE code_hash=#{hash} FOR UPDATE") Invite invite(String hash);
+    @Update("UPDATE invite_code SET remaining_uses=remaining_uses-1 WHERE code_hash=#{hash} AND remaining_uses>0") int consumeInvite(String hash);
+    @Insert("INSERT INTO auth_session(id,owner_id,access_hash,refresh_hash,access_expires,refresh_expires) VALUES(#{id},#{ownerId},#{accessHash},#{refreshHash},#{accessExpires},#{refreshExpires})") void sessionInsert(Session s);
+    @Select("SELECT * FROM auth_session WHERE access_hash=#{hash} AND revoked=FALSE AND access_expires>UTC_TIMESTAMP()") Session byAccess(String hash);
+    @Select("SELECT * FROM auth_session WHERE refresh_hash=#{hash} AND revoked=FALSE AND refresh_expires>UTC_TIMESTAMP() FOR UPDATE") Session byRefresh(String hash);
+    @Update("UPDATE auth_session SET access_hash=#{accessHash},refresh_hash=#{refreshHash},access_expires=#{accessExpires},refresh_expires=#{refreshExpires} WHERE id=#{id} AND revoked=FALSE") int rotateSession(Session s);
+    @Update("UPDATE auth_session SET revoked=TRUE WHERE id=#{id}") void revokeSession(String id);
+    @Update("UPDATE auth_session SET revoked=TRUE WHERE owner_id=#{owner}") void revokeAccount(String owner);
+    @Update("UPDATE parent_account SET password_hash=#{passwordHash} WHERE id=#{id}") void passwordUpdate(Account a);
+    @Select("SELECT * FROM child_profile WHERE owner_id=#{owner} AND deleted=FALSE ORDER BY created_at,id") List<Child> children(String owner);
+    @Select("SELECT * FROM child_profile WHERE id=#{id} AND owner_id=#{owner} AND deleted=FALSE") Child child(@Param("owner") String owner,@Param("id") String id);
+    @Select("SELECT * FROM child_profile WHERE id=#{id} AND owner_id=#{owner} AND deleted=FALSE FOR UPDATE") Child lockChild(@Param("owner") String owner,@Param("id") String id);
+    @Insert("INSERT INTO child_profile(id,owner_id,nickname,grade,textbook) VALUES(#{id},#{ownerId},#{nickname},#{grade},#{textbook})") void childInsert(Child c);
+    @Update("UPDATE child_profile SET nickname=#{nickname},grade=#{grade},textbook=#{textbook},version=version+1 WHERE id=#{id} AND owner_id=#{ownerId} AND version=#{version} AND deleted=FALSE") int childUpdate(Child c);
+    @Update("UPDATE child_profile SET deleted=TRUE,version=version+1 WHERE id=#{id} AND owner_id=#{owner} AND deleted=FALSE") int childDelete(@Param("owner") String owner,@Param("id") String id);
+    @Insert("INSERT INTO media_asset(id,owner_id,child_id,object_key,content_type,size_bytes,width,height,expires_at) VALUES(#{id},#{ownerId},#{childId},#{objectKey},#{contentType},#{sizeBytes},#{width},#{height},#{expiresAt})") void assetInsert(Asset a);
+    @Select("SELECT * FROM media_asset WHERE id=#{id} AND owner_id=#{owner} AND child_id=#{child} AND (expires_at IS NULL OR expires_at>UTC_TIMESTAMP())") Asset asset(@Param("owner") String owner,@Param("child") String child,@Param("id") String id);
+    @Select("SELECT * FROM media_asset WHERE child_id=#{child} AND owner_id=#{owner}") List<Asset> assets(@Param("owner") String owner,@Param("child") String child);
+    @Select("SELECT * FROM media_asset WHERE expires_at<UTC_TIMESTAMP() LIMIT 100") List<Asset> expiredAssets();
+    @Delete("DELETE FROM media_asset WHERE id=#{id}") void assetRemove(String id);
+    @Insert("INSERT INTO learning_material(id,owner_id,child_id,title,type,asset_ids) VALUES(#{id},#{ownerId},#{childId},#{title},#{type},#{assetIds})") void materialInsert(Material m);
+    @Select("SELECT * FROM learning_material WHERE id=#{id} AND owner_id=#{owner} AND child_id=#{child}") Material material(@Param("owner") String owner,@Param("child") String child,@Param("id") String id);
+    @Insert("INSERT INTO ai_job(id,owner_id,child_id,material_id,type,input_json,request_key,request_hash,next_run_at) VALUES(#{id},#{ownerId},#{childId},#{materialId},#{type},#{inputJson},#{requestKey},#{requestHash},UTC_TIMESTAMP())") void jobInsert(Job j);
+    @Select("SELECT * FROM ai_job WHERE owner_id=#{owner} AND child_id=#{child} AND type=#{type} AND request_key=#{key}") Job jobByKey(@Param("owner") String owner,@Param("child") String child,@Param("type") String type,@Param("key") String key);
+    @Select("SELECT COUNT(*) FROM ai_job WHERE owner_id=#{owner} AND created_at>=UTC_DATE()") int dailyJobs(String owner);
+    @Select("SELECT * FROM ai_job WHERE owner_id=#{owner} AND child_id=#{child} AND type=#{type} AND request_hash=#{hash} AND status IN ('SUCCEEDED','RUNNING','QUEUED') ORDER BY CASE status WHEN 'SUCCEEDED' THEN 0 WHEN 'RUNNING' THEN 1 ELSE 2 END,created_at DESC,id DESC LIMIT 1") Job usableJob(@Param("owner")String owner,@Param("child")String child,@Param("type")String type,@Param("hash")String hash);
+    @Select("SELECT * FROM ai_job WHERE id=#{id} AND owner_id=#{owner} AND child_id=#{child}") Job job(@Param("owner") String owner,@Param("child") String child,@Param("id") String id);
+    @Select("SELECT * FROM ai_job WHERE claim_token=#{token} AND status='RUNNING'") Job claimedJob(String token);
+    @Update("UPDATE ai_job SET status='RUNNING',attempt_count=attempt_count+1,claim_token=#{token},lease_until=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 240 SECOND) WHERE status='QUEUED' AND next_run_at<=UTC_TIMESTAMP() ORDER BY next_run_at,id LIMIT 1") int claimNextJob(@Param("token") String token);
+    @Update("UPDATE ai_job SET lease_until=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 240 SECOND) WHERE id=#{id} AND claim_token=#{token} AND status='RUNNING'") int renewJob(@Param("id")String id,@Param("token")String token);
+    @Update("UPDATE ai_job SET status='SUCCEEDED',result_json=#{result},error_code=NULL,error_message=NULL,lease_until=NULL WHERE id=#{id} AND claim_token=#{token} AND status='RUNNING'") int finishJob(@Param("id") String id,@Param("token") String token,@Param("result") String result);
+    @Update("UPDATE ai_job SET status=#{status},error_code=#{code},error_message=#{message},next_run_at=DATE_ADD(UTC_TIMESTAMP(),INTERVAL 30 SECOND),lease_until=NULL WHERE id=#{id} AND claim_token=#{token} AND status='RUNNING'") int failJob(@Param("id") String id,@Param("token") String token,@Param("status") String status,@Param("code") String code,@Param("message") String message);
+    @Update("UPDATE ai_job SET status=CASE WHEN attempt_count<3 THEN 'QUEUED' ELSE 'FAILED' END,claim_token=NULL,lease_until=NULL,error_code='WORKER_INTERRUPTED',error_message='处理被中断，请重试' WHERE status='RUNNING' AND lease_until<UTC_TIMESTAMP()") int recoverJobs();
+    @Update("UPDATE ai_job SET status='CANCELLED',claim_token=NULL WHERE child_id=#{child} AND owner_id=#{owner} AND status IN ('QUEUED','RUNNING')") void cancelChildJobs(@Param("owner") String owner,@Param("child") String child);
+    @Insert("INSERT INTO learning_list(id,owner_id,child_id,title,material_id,recognition_job_id,request_key,request_hash,subject) VALUES(#{id},#{ownerId},#{childId},#{title},#{materialId},#{recognitionJobId},#{requestKey},#{requestHash},#{subject})") void listInsert(ListHead l);
+    @Select("SELECT * FROM learning_list WHERE owner_id=#{owner} AND child_id=#{child} AND request_key=#{key}") ListHead listByKey(@Param("owner") String owner,@Param("child") String child,@Param("key") String key);
+    @Select("SELECT * FROM learning_list WHERE child_id=#{child} AND owner_id=#{owner} AND subject='ENGLISH' ORDER BY created_at DESC,id DESC LIMIT 200") List<ListHead> lists(@Param("owner") String owner,@Param("child") String child);
+    @Select("SELECT * FROM learning_list WHERE id=#{id} AND child_id=#{child} AND owner_id=#{owner} AND subject='ENGLISH'") ListHead list(@Param("owner") String owner,@Param("child") String child,@Param("id") String id);
+    @Select("SELECT * FROM learning_list WHERE recognition_job_id=#{job} AND owner_id=#{owner} AND child_id=#{child}") ListHead listByJob(@Param("owner") String owner,@Param("child") String child,@Param("job") String job);
+    @Update("UPDATE learning_list SET title=#{title},current_version=current_version+1 WHERE id=#{id} AND current_version=#{version}") int bumpList(@Param("id") String id,@Param("title") String title,@Param("version") Integer version);
+    @Insert("INSERT INTO list_version(id,list_id,version,title,request_key,request_hash) VALUES(#{id},#{listId},#{version},#{title},#{requestKey},#{requestHash})") void versionInsert(ListVersion v);
+    @Select("SELECT * FROM list_version WHERE list_id=#{id} AND request_key=#{key}") ListVersion versionByKey(@Param("id")String id,@Param("key")String key);
+    @Insert("INSERT INTO list_item(id,version_id,ordinal,text,meaning) VALUES(#{id},#{versionId},#{ordinal},#{text},#{meaning})") void wordInsert(Word w);
+    @Select("SELECT i.* FROM list_item i JOIN list_version v ON i.version_id=v.id WHERE v.list_id=#{id} AND v.version=#{version} ORDER BY i.ordinal") List<Word> words(@Param("id") String id,@Param("version") Integer version);
+    @Insert("INSERT INTO practice_session(id,owner_id,child_id,list_id,title,snapshot_json,settings_json,request_key,request_hash,subject) VALUES(#{id},#{ownerId},#{childId},#{listId},#{title},#{snapshotJson},#{settingsJson},#{requestKey},#{requestHash},#{subject})") void practiceInsert(Practice p);
+    @Select("SELECT * FROM practice_session WHERE owner_id=#{owner} AND child_id=#{child} AND request_key=#{key}") Practice practiceByKey(@Param("owner") String owner,@Param("child") String child,@Param("key") String key);
+    @Select("SELECT * FROM practice_session WHERE owner_id=#{owner} AND child_id=#{child} AND id=#{id}") Practice practice(@Param("owner") String owner,@Param("child") String child,@Param("id") String id);
+    @Select("SELECT * FROM practice_session WHERE owner_id=#{owner} AND child_id=#{child} AND subject='ENGLISH' ORDER BY created_at DESC,id DESC LIMIT 50") List<Practice> practices(@Param("owner") String owner,@Param("child") String child);
+    @Update("UPDATE practice_session SET progress_json=#{progressJson},status=#{status},version=version+1 WHERE id=#{id} AND owner_id=#{ownerId} AND version=#{version}") int progress(Practice p);
+    @Insert("INSERT IGNORE INTO play_event(id,practice_id,event_id,payload_json) VALUES(#{id},#{practice},#{event},#{payload})") void event(@Param("id") String id,@Param("practice") String practice,@Param("event") String event,@Param("payload") String payload);
+}

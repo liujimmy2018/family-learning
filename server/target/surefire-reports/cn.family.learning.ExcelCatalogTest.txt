@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: cn.family.learning.ExcelCatalogTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.527 s - in cn.family.learning.ExcelCatalogTest

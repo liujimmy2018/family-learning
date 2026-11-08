@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>家庭学习助手 · 词表管理</title><link rel="stylesheet" href="style.css"><script src="app.js" defer></script></head>
+<body>
+<header class="app-header"><a class="brand" href="index.html"><span class="brand-icon">Aa</span><span>家庭学习助手<small>词表管理工作台</small></span></a><div id="account"></div></header>
+<div id="notice" role="status" aria-live="polite" hidden></div>
+<section id="login" class="login-panel"><span class="eyebrow">为每一次听写做好准备</span><h1>整理词表，让孩子专心学习。</h1><p>使用 App 中的家长账号登录，导入整理好的 Excel，手机即可选择单元进行听写。</p><form id="login-form"><label>家长账号<input name="name" autocomplete="username" required minlength="4" maxlength="40"></label><label>密码<input name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="72"></label><button type="submit" class="primary">登录工作台</button></form><small>还没有账号？请先在 App 使用邀请码注册。词表仅对当前家长账号可见。</small></section>
+<div id="workspace" hidden><nav class="nav"><button data-tab="catalog" class="selected">英语词表</button><button data-tab="chinese">语文生字词</button><button data-tab="recitation">背诵课文</button><button data-tab="wrong">孩子的错词本</button><button data-tab="guide">使用指南</button></nav><main id="main"></main></div>
+<dialog id="modal"><div id="modal-content"></div></dialog>
+<footer>家庭学习助手 · 词表与课文管理</footer>
+</body></html>

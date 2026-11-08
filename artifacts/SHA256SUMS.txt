@@ -1,0 +1,15 @@
+3e88ca8f88702dccf70ab4fa96666e4cda31b450c776d4ac261fbdbfbf4f53cc  family-learning-0.1.0-debug.apk
+28e5ddfddedf5204b4036bad7ba284e9a25cf530eb4689f682a889f81a7757cf  family-learning-server-0.1.0.jar
+1745808d55c5e7f44bdea0bf63dd191fe024fcee8bcb3c697c3f43111b678b49  family-learning-0.2.0-debug.apk
+2c73c63d8b238534367b4bf648eca37392337e731f29e4f5d801fd2e90aa7931  family-learning-0.2.1-debug.apk
+e76935077922c25b5f472d9203f6a98c4ad5321b57698396fa7eedd01a518a34  family-learning-0.3.0-debug.apk
+3728b53c83156f33870db4385350039b15466132f5cff8f5189e25ee68a6b289  英语词表导入模板.xlsx
+3ca0bc77ce2f4e8ad44a99f32e85140a9a6bd68edc8eb45cc7fec9ff9b8f2c66  family-learning-server-0.3.0.jar
+46709e9892a086fe826ddd6733ad73623d4f2cd6e95e6d349ebc347c9d89dd42  family-learning-0.4.0-debug.apk
+13925a452408a77ceb8dccddc9c35d9c90875d2c5e8d87bbd548516b2cd20d91  family-learning-0.4.0-debug.zip
+a54afce5819e0e5c6e0b84111c5f9b13265396bed8f5501822e6a9b8543b5137  family-learning-server-0.4.0.jar
+ffa93741e06395277255058a05cfd56ceccfbfd3f157036cd874a5a106c1ff11  family-learning-0.4.1-debug.apk
+6cbd03203732c56d353a4d973ac019a35dea881e13969453c1510c0f409eec24  family-learning-0.4.1-debug.zip
+8bbc271fbd15da6de55abc6870658495aef32477350575820c420ab1db2813b7  family-learning-server-0.4.1.jar
+b88616e6fc916514264b365c4fd62487a3746ee1273cb349d369a57d55036745  family-learning-0.5.0-debug.apk
+ff336642f5b86056cdc922cfc3563bcc504867851ceb178c67430abae8837f41  family-learning-server-0.5.0.jar

@@ -1,0 +1,6 @@
+target
+data
+.env
+*.log
+src/main/resources/application.yml
+config/application-local.yml
